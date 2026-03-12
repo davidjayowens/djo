@@ -1,6 +1,6 @@
-#[build-system]
-#requires = ["hatchling >= 1.26"]
-#build-backend = "hatchling.build"
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "djo"
@@ -15,7 +15,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
-license = "Creative Commons BY-NC-SA"
+license = "CC-BY-NC-SA-4.0"
 license-files = ["LICEN[CS]E*"]
 
 [project.urls]
