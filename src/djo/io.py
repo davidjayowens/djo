@@ -230,15 +230,15 @@ class Log:
 ##    STATUS/PROGRESS BARS    ##
 ################################
 
-def status_bar(progress: float,
-               msg: str | None = None,):
+def print_status_bar(   filled: float,
+                        msg: str | None = None,):
     """
     Prints a status/progress animation that updates
     on a single line.
 
     Parameters
     ----------
-    progress : float, range 0.0-1.0
+    filled : float, range 0.0-1.0
         Determines the current position of the animation.
 
     msg : str, optional
@@ -274,7 +274,7 @@ def status_bar(progress: float,
     >> Status of stuff being done: [*******-------------]
 
     """
-    prog_chars = int(progress / 0.05)
+    prog_chars = int(filled / 0.05)
     prog_bar = f'[{"*"*prog_chars}{"-"*(20-prog_chars)}]'
     prog_str = f'{msg} {prog_bar}'
     
