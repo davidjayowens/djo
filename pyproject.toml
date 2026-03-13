@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "djo"
-version = "0.1.0"
+version = "1.0.0"
 authors = [
   { name="David Owens", email="davidjayowens+github@gmail.com" },
 ]
@@ -17,6 +17,10 @@ classifiers = [
 ]
 license = "CC-BY-NC-SA-4.0"
 license-files = ["LICEN[CS]E*"]
+dependencies = []
+[project.optional-dependencies]
+IO = ["pandas>=2.2"]
+API = ["requests"]
 
 [project.urls]
 Homepage = "https://github.com/davidjayowens/djo"

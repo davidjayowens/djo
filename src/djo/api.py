@@ -1,10 +1,10 @@
 import requests
 from requests.exceptions import *
 
-import pandas as pd
-import numpy as np
-
 from typing import Literal
+
+import logging
+log = logging.getLogger('djo.api').addHandler(logging.NullHandler())
 
 
 def call(method: Literal['get', 'put', 'post'],
@@ -15,7 +15,7 @@ def call(method: Literal['get', 'put', 'post'],
           stream: bool = False,
           **params):
     """
-    Make a GET request from a REST API
+    Make a request from a web API.
 
     url : str
         The base URL endpoint
@@ -33,7 +33,7 @@ def call(method: Literal['get', 'put', 'post'],
     timeout : int or float, default 10
         Time (in seconds) after which the request times out, raising a Time
 
-    params : optional
+    **params : optional
         Additional keyword parameters to include in the request
     """
     method_dict = {
@@ -48,22 +48,31 @@ def call(method: Literal['get', 'put', 'post'],
     
     success = False
     try:
+        log.debug(f"Attempting API call:\nType: {method.strip().upper()}\nURL: {url}")
         response = this_method(url=url, headers=headers, params=params, stream=stream, timeout=timeout)
 
         # Check if response is valid
         response.raise_for_status()
         success = True
     except Timeout:
-        print(f"Request timed out, please try again later or increase timeout parameter (default 10).")
+        msg = "Request timed out, please try again later or increase timeout parameter (default 10)."
+        log.debug(msg)
+        print(msg)
     except ConnectionError as e:
         # Network problem (e.g. DNS failure, refused connection, etc)
-        print(f"Request failed: {e}")
+        msg = f"Request failed: {e}"
+        log.debug(msg)
+        print(msg)
     except HTTPError as e:
         # Request returned an unsuccessful status code
-        print(f"Response is invalid: {e}")
+        msg = "Response is invalid: {e}"
+        log.debug(msg)
+        print(msg)
     except MissingSchema as e:
         # Bad URL provided
-        print(f"Bad URL: {e}")
+        msg = f"Bad URL: {e}"
+        log.debug(msg)
+        print(msg)
 
     if success:
         results_as = results_as.strip().lower()
@@ -85,7 +94,7 @@ def get(url: str,
         stream: bool = False,
         **params):
     """
-    Make a GET request from a REST API
+    Make a GET request to a web API.
 
     url : str
         The base URL endpoint
@@ -103,7 +112,7 @@ def get(url: str,
     timeout : int or float, default 10
         Time (in seconds) after which the request times out, raising a Time
 
-    params : optional
+    **params : optional
         Additional keyword parameters to include in the request
     """
     return(call('get', 
@@ -122,7 +131,7 @@ def put(url: str,
         stream: bool = False,
         **params):
     """
-    Make a GET request from a REST API
+    Make a PUT request to a web API.
 
     url : str
         The base URL endpoint
@@ -140,7 +149,7 @@ def put(url: str,
     timeout : int or float, default 10
         Time (in seconds) after which the request times out, raising a Time
 
-    params : optional
+    **params : optional
         Additional keyword parameters to include in the request
     """
     return(call('put', 
@@ -159,7 +168,7 @@ def post(url: str,
         stream: bool = False,
         **params):
     """
-    Make a GET request from a REST API
+    Make a POST request to a web API.
 
     url : str
         The base URL endpoint
@@ -177,7 +186,7 @@ def post(url: str,
     timeout : int or float, default 10
         Time (in seconds) after which the request times out, raising a Time
 
-    params : optional
+    **params : optional
         Additional keyword parameters to include in the request
     """
     return(call('post', 

@@ -1,15 +1,18 @@
 import unicodedata
 
+#########################
+##    TEXT CLEANING    ##
+#########################
 
-def normalize_text(text):
+def normalize_text(text: str):
     """
     NFKD form: "Normalization Form Compatibility Decomposition"
 
     Improves text matching by removing character accents/decorators, 
     reducing each letter to its base form (so 'é' -> 'e', etc).
 
-    Note that this may result in some non-normalizeable characters
-    being removed from the final text.
+    Note that this may result in some non-normalizable characters
+    being removed from the results.
     """
 
     try:

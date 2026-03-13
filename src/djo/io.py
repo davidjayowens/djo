@@ -2,18 +2,20 @@ import logging
 import sys
 from pathlib import Path
 import pandas as pd
-import chardet
+#import chardet
 import datetime as dt
 
 from typing import Literal
 
-""" >>> PANDAS METHODS <<< """
 
-def _get_pd_load_method(file: str | Path):
+##########################
+##    PANDAS METHODS    ##
+##########################
+
+def _get_pd_read(fpath: Path):
     """ Returns the appropriate pd.read_* method, based on file extension."""
     
-    this_file = Path(file).resolve()
-    this_filetype = this_file.suffix.lower().replace('.', '')
+    this_filetype = fpath.suffix.lower().replace('.', '')
 
     methods = {
         'csv': pd.read_csv,
@@ -29,39 +31,46 @@ def _get_pd_load_method(file: str | Path):
     if this_method is not None:
         return(this_method)
     else:
-        raise TypeError(f"Invalid file type; must be one of: {list(methods.keys())}\n\n{this_file}")
+        raise TypeError(f"Invalid file type; must be one of: {list(methods.keys())}\n\n{fpath}")
 
 
-def pd_load(file: str | Path,
+def pd_read(file: str | Path,
             **kwargs):
     """
-    Dynamically loads a file into pandas; 
-    all data is loaded as-is as strings, with no manipulation/interpretation
-    by pandas.
+    Loads a file to a DataFrame, agnostic of file format; by default, data
+    is loaded in string format with na_filter=False.
     """
-    pass
+    fpath = Path(file).resolve()
+    reader = _get_pd_read(fpath)
+
+    if kwargs.get('dtype') is None:
+        kwargs['dtype'] = str
+    if kwargs.get('na_filter') is None:
+        kwargs['na_filter'] = False
+
+    df = reader(fpath, **kwargs)
+
+    return(df)
 
 
 
-""" >>> LOGGING METHODS <<< """
+###########################
+##    LOGGING METHODS    ##
+###########################
 
 class Log:
-    def __init__(self,
-                 id: str | None = None, 
+    def __init__(self, 
                  file_name: str | Path | None = None,
                  file_dir: str | Path | None = None,
-                 level: Literal['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'] = 'INFO',
+                 id: str | None = None,
+                 level: Literal['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'] = 'DEBUG',
                  verbose: bool = True):
         """
         Creates a Log object
 
         Parameters
         ----------
-        id : str, optional
-            Log identifier; alphanumeric, '_' and '.' only. Should be 
-            unique by user/implementation.
-
-        file_name : str or Path, default "Log"
+        file_name : str or Path
             Name of the log output; timestamp of log creation will be
             appended to this string.
 
@@ -70,6 +79,12 @@ class Log:
             working directory if none is passed.
             > NOTE: If a directory was included as part of file_name,
                     this parameter will be ignored.
+
+        id : str, optional
+            Log identifier; alphanumeric, '_' and '.' only. Should be 
+            unique by user/implementation. If no value is provided, the log
+            captures all available log messages from sub-processes (usually
+            at the DEBUG level).)
 
         verbose : bool, default True
             If True, messages logged at any level other than 'DEBUG'
@@ -169,7 +184,7 @@ class Log:
         """
         Drops a handler from the active stream. 
 
-        By default, drops the last-added handler.
+        By default, drops the most recently added handler.
         """
         this_handler = self.log_obj.handlers[idx]
 
@@ -198,8 +213,6 @@ class Log:
         if level_int:
             self.log_obj.log(msg=msg, level=level_int)
 
-            #if self.verbose:
-            #    print(msg)
         else:
             raise ValueError(f"Invalid parameter: {level=}\nMust be one of: 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'")
 
@@ -213,24 +226,52 @@ class Log:
             self.drop_file()
 
 
-""" >>> OTHER METHODS <<< """
+################################
+##    STATUS/PROGRESS BARS    ##
+################################
 
-def status_bar(msg: str,
-               progress: float):
+def status_bar(progress: float,
+               msg: str | None = None,):
     """
     Prints a status/progress animation that updates
     on a single line.
 
-    EG: status_bar(msg='Install progress:', progress=0.25)
-    >> 'Install progress: [*****---------------]'
-
     Parameters
     ----------
-    msg : str
-        The status message at the start of the line.
-
     progress : float, range 0.0-1.0
         Determines the current position of the animation.
+
+    msg : str, optional
+        The status message at the start of the line.
+
+
+    Examples
+    --------
+    Repeated calls to the status_bar() method will continuously print
+    to the same line as long as there are no other print statements called
+    in-between.
+
+        for i in np.linspace(0.0, 1.0, 20):
+            status_bar(i)
+
+    Progress bar fills up, with '*' replacing '-' L-R:
+    start           >> [--------------------] 
+    some progress   >> [***-----------------]
+    more progress   >> [************--------]
+    done iterating  >> [********************]
+
+    Customize the message so it's clear what the progress bar represents:
+    
+        iterated = 0
+        for/while (some iter):
+            i = (len(iter) - iterated) / len(iter)
+            status_bar(i, 'Status of stuff being done:')
+            
+            # DO STUFF
+
+            iterated += 1
+
+    >> Status of stuff being done: [*******-------------]
 
     """
     prog_chars = int(progress / 0.05)
@@ -240,38 +281,80 @@ def status_bar(msg: str,
     print(prog_str, end='            \r')
 
 
-def status_spin(msg: str):
-    """
-    Returns a status/progress animation that spins,
-    updating on a single line.
+class Spinner:
+    def __init__(self, 
+                 style: Literal['barspin', 'bounce', 'dice', 'hearts'], 
+                 msg: str | None = None):
+        """
+        Creates an animated status/processing message.
 
-    Recommended use:
-        spin_msg = status_spin("Processing...")
-        for item in iterable:
-            print(next(spin_msg), end='        \r')
-            # do something to item
+        Parameters
+        ----------
+        style : one of {'barspin', 'bounce', 'dice', 'hearts'}
+            Select the animation to use.
 
-    Parameters
-    ----------
-    msg : str
-        The status message at the start of the line.
-    """
-    #TODO: How to make this spin as a concurrent process?
-    #    > Start/stop the spin?
-    spinner = spin_gen()
-    while True:
-        yield f"{msg} {next(spinner)}"
+        msg : str, optional
+            Optional message to print before the animation.
+
+        Examples
+        --------
+        spnr = Spinner()
+
+        Calling print() on the object directly will produce the next string
+        in the animation:
+
+            from time import sleep
+
+            for _ in range(3):
+                print(spnr)
+                sleep(0.3)
+
+        >> -
+        >> \\
+        >> |
+
+        However, for a cleaner aesthetic, use the object's .print() method
+        to keep the results on the same line:
+
+            for _ in range(3):
+                spnr.print()
+                sleep(0.3)
+
+        In this case the animation updates in-place on a single line.
+
+        """
+        self.style = style
+        self.genr8r = self._spin_gen()
+
+        self.msg = msg
+
+    def _spin_gen(self):
+        """
+        Generator that returns the next character in a looping animation.
+
+        style: one of {'barspin', 'bounce', 'dice', 'hearts'}
+        """
+        anim_loops = {
+            'barspin': ['-', '\\', '|', '/'],
+            'bounce': ['_','o','ᐤ','˚','ᐤ','o'],
+            'dice': ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'],
+            'hearts': ['🂱','🂲','🂳','🂴','🂵','🂶','🂷','🂸','🂹','🂺','🂻','🂽','🂾'],
+        }
+
+        status_chars = anim_loops[self.style]
+        
+        i = 0
+        while True:
+            yield status_chars[i]
+            i += 1
+            if i == len(status_chars):
+                i = 0
     
-
+    def __repr__(self):
+        return f"Spinner(style='{self.style}', msg='{self.msg}')"
     
-def spin_gen():
-    """
-    Generator that returns the next character in a "spinning" animation.
-    """
-    status_chars = ['-', '\\', '|', '/']
-    i = 0
-    while True:
-        yield status_chars[i]
-        i += 1
-        if i == 4:
-            i = 0
+    def __str__(self):
+        return f"{self.msg} {next(self.genr8r)}" if self.msg else f"{next(self.genr8r)}"
+
+    def print(self):
+        print(f"{self}", end='        \r')
